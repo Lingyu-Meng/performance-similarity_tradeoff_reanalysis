@@ -126,8 +126,12 @@ model {
             // wgtWith_ms is the weight for the With action, wgtAgst_ms is the weight for the Against action
             wgtWith_ms[s,t] += w[k] * otherWith1[s,t,k];
         }
+      if (sum(w) == 0) {
+        wgtAgst_ms[s,t] = 0; // avoid NaN
+        } else {
       wgtWith_ms[s,t] = wgtWith_ms[s,t] / sum(w); // normalize the weights
       wgtAgst_ms[s,t] = 1.0 - wgtWith_ms[s,t]; // the rest of the weight is for the Against action
+      }
 
       // compute action probs using built-in softmax function and related to choice data
       valfun1 = beta[1,s] * v[t];                     //beta1 is betav, the weight for Eq 8
@@ -210,9 +214,13 @@ generated quantities {
             // wgtWith_ms is the weight for the With action, wgtAgst_ms is the weight for the Against action
             wgtWith_ms[s,t] += w[k] * otherWith1[s,t,k];
         }
+        if (sum(w) == 0) {
+          wgtAgst_ms[s,t] = 0; // avoid NaN
+          } else {
         wgtWith_ms[s,t] = wgtWith_ms[s,t] / sum(w); // normalize the weights
         wgtAgst_ms[s,t] = 1.0 - wgtWith_ms[s,t]; // the rest of the weight is for the Against action
-      
+        }
+        
         valfun1 = beta[1,s] * v[t];
         log_likc1[s] = log_likc1[s] + categorical_logit_lpmf(choice1[s,t] | valfun1);
         
