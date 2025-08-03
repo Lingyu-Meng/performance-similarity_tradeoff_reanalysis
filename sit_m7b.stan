@@ -83,6 +83,9 @@ model {
   real valdiff;
   real betfun1;
   real betfun2;
+  // define wgtWith_ms and wgtAgst_ms as the weights for the With and Against actions
+  real wgtWith_ms[nSubjects,nTrials];   
+  real wgtAgst_ms[nSubjects,nTrials];
 
   // hyperparameters
   lr_mu_pr  ~ normal(0,1);
@@ -112,9 +115,8 @@ model {
 
 
     for (t in 1:Tsubj[s]) {
-      // compute the weights for the With and Against actions
-      real wgtWith_ms = 0.0;
-      real wgtAgst_ms = 0.0;
+      // initial wgtWith_ms, we will calculate them later
+      wgtWith_ms[s,t] = 0.0;
       vector[coplayer] w;
       w = rep_vector(0.0, coplayer);
       // therefore, weights are temporarily stored
@@ -122,10 +124,10 @@ model {
         for (k in 1:coplayer) {
             w[k] = beta[11,s] * acc[s,t,k] + (1 - beta[11,s]) * con[s,t,k]; // beta[11,s] is omega, the weight for the trade-off
             // wgtWith_ms is the weight for the With action, wgtAgst_ms is the weight for the Against action
-            wgtWith_ms += w[k] * otherWith1[s,t,k];
+            wgtWith_ms[s,t] += w[k] * otherWith1[s,t,k];
         }
-      wgtWith_ms = wgtWith_ms / sum(w); // normalize the weights
-      wgtAgst_ms = 1.0 - wgtWith_ms; // the rest of the weight is for the Against action
+      wgtWith_ms[s,t] = wgtWith_ms[s,t] / sum(w); // normalize the weights
+      wgtAgst_ms[s,t] = 1.0 - wgtWith_ms[s,t]; // the rest of the weight is for the Against action
 
       // compute action probs using built-in softmax function and related to choice data
       valfun1 = beta[1,s] * v[t];                     //beta1 is betav, the weight for Eq 8
@@ -136,13 +138,13 @@ model {
       betfun1 = beta[5,s] + beta[6,s] * valdiff;
       bet1[s,t] ~ ordered_logistic(betfun1, thres);
 
-      valfun2 = beta[2,s] + beta[3,s] * valdiff + beta[4,s] * wgtAgst_ms;
+      valfun2 = beta[2,s] + beta[3,s] * valdiff + beta[4,s] * wgtAgst_ms[s,t];
       chswtch[s,t] ~ bernoulli_logit(valfun2);
 
       if ( chswtch[s,t] == 0) {
-        betfun2 = beta[7,s] * wgtWith_ms + beta[8,s] * wgtAgst_ms + betfun1;
+        betfun2 = beta[7,s] * wgtWith_ms[s,t] + beta[8,s] * wgtAgst_ms[s,t] + betfun1;
       } else if ( chswtch[s,t] == 1) {
-        betfun2 = beta[9,s] * wgtWith_ms + beta[10,s] * wgtAgst_ms + betfun1;        
+        betfun2 = beta[9,s] * wgtWith_ms[s,t] + beta[10,s] * wgtAgst_ms[s,t] + betfun1;        
       } 
 
       bet2[s,t] ~ ordered_logistic(betfun2, thres);     
@@ -166,6 +168,10 @@ generated quantities {
   real log_likc2[nSubjects]; 
   real log_likb1[nSubjects]; 
   real log_likb2[nSubjects]; 
+  
+  // define wgtWith_ms and wgtAgst_ms as the weights for the With and Against actions
+  real wgtWith_ms[nSubjects,nTrials];   
+  real wgtAgst_ms[nSubjects,nTrials];
 
   // recover the mu
   lr_mu   = Phi_approx(lr_mu_pr);
@@ -193,6 +199,20 @@ generated quantities {
       log_likb2[s] = 0;
      
       for (t in 1:Tsubj[s]) {
+        // initial wgtWith_ms, we will calculate them later
+        wgtWith_ms[s,t] = 0.0;
+        vector[coplayer] w;
+        w = rep_vector(0.0, coplayer);
+        // therefore, weights are temporarily stored
+
+        for (k in 1:coplayer) {
+            w[k] = beta[11,s] * acc[s,t,k] + (1 - beta[11,s]) * con[s,t,k]; // beta[11,s] is omega, the weight for the trade-off
+            // wgtWith_ms is the weight for the With action, wgtAgst_ms is the weight for the Against action
+            wgtWith_ms[s,t] += w[k] * otherWith1[s,t,k];
+        }
+        wgtWith_ms[s,t] = wgtWith_ms[s,t] / sum(w); // normalize the weights
+        wgtAgst_ms[s,t] = 1.0 - wgtWith_ms[s,t]; // the rest of the weight is for the Against action
+      
         valfun1 = beta[1,s] * v[t];
         log_likc1[s] = log_likc1[s] + categorical_logit_lpmf(choice1[s,t] | valfun1);
         
@@ -201,13 +221,13 @@ generated quantities {
         betfun1 = beta[5,s] + beta[6,s] * valdiff;
         log_likb1[s] = log_likb1[s] + ordered_logistic_lpmf(bet1[s,t] | betfun1, thres);
         
-        valfun2 = beta[2,s] + beta[3,s] * valdiff + beta[4,s] * wgtAgst_ms;
+        valfun2 = beta[2,s] + beta[3,s] * valdiff + beta[4,s] * wgtAgst_ms[s,t];
         log_likc2[s] = log_likc2[s] + bernoulli_logit_lpmf(chswtch[s,t] | valfun2);
         
         if ( chswtch[s,t] == 0) {
-          betfun2 = beta[7,s] * wgtWith_ms + beta[8,s] * wgtAgst_ms + betfun1;
+          betfun2 = beta[7,s] * wgtWith_ms[s,t] + beta[8,s] * wgtAgst_ms[s,t] + betfun1;
         } else if ( chswtch[s,t] == 1) {
-          betfun2 = beta[9,s] * wgtWith_ms + beta[10,s] * wgtAgst_ms + betfun1;
+          betfun2 = beta[9,s] * wgtWith_ms[s,t] + beta[10,s] * wgtAgst_ms[s,t] + betfun1;
         }
         log_likb2[s] = log_likb2[s] + ordered_logistic_lpmf(bet2[s,t] | betfun2, thres);
                 
