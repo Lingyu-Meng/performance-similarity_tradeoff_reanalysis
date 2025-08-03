@@ -1,3 +1,8 @@
+// This script is modified from the original code "sit_m2b.stan" 
+// https://github.com/lei-zhang/SIT/blob/master/code/stanmodel/sit_m2b.stan
+// We redefined the preference weight to investigate the trade-off between the 
+// accurate and consistent social information in the social influence model.
+
 // Fictitious RL model + social influence -- Zhang & Gläscher (2020) [10.1126/sciadv.abb4159]
 data {
   int<lower=1> nSubjects;                              // number of subjects
@@ -9,8 +14,12 @@ data {
   int<lower=1,upper=3> bet1[nSubjects,nTrials];        // 1st bet, 1,2 or 3   
   int<lower=1,upper=3> bet2[nSubjects,nTrials];        // 2nd bet, 1,2 or 3
   real<lower=-1,upper=1> reward[nSubjects,nTrials];    // outcome, 1 or -1
-  real<lower=0,upper=1>  wgtWith_ms[nSubjects,nTrials];       
-  real<lower=0,upper=1>  wgtAgst_ms[nSubjects,nTrials];   
+  int<lower=1> coplayer;                               // number of coplayers, 4
+  real<lower=0,upper=1>  acc[nSubjects,nTrials,coplayer];   // accuracy, 0, 0.3, 0.6, 1; New data caculated from the original data in r
+  real<lower=0,upper=1>  con[nSubjects,nTrials,coplayer];   // consistency, 0, 0.3, 0.6, 1; New data
+  real<lower=0,upper=1>  otherWith1[nSubjects,nTrials,coplayer];// with or against others' choice1, 0 or 1; New data
+  //real<lower=0,upper=1>  wgtWith_ms[nSubjects,nTrials];   // not needed in my model, we will calculate it later
+  //real<lower=0,upper=1>  wgtAgst_ms[nSubjects,nTrials];   // not needed in my model
 }
 
 transformed data {
@@ -19,8 +28,20 @@ transformed data {
   int<lower=1> K;   // number of levels of confidence rating s
 
   initV = rep_vector(0.0,2);    
-  B      = 10;
+  B      = 11;
   K      = 3;
+  // Lingyu's note:
+  // beta1 is beta_v, the weight in Eq 8
+  // beta2 is beta_bias_C2, the stay bias in Eq 13
+  // beta3 is beta_vdiff_C2, the weight for difference between the two actions in Eq 13
+  // beta4 is beta_wgtAgst_C2, the weight for the against action in Eq 13
+  // beta5 is beta_bias_B1, the bet stay bias in Eq 27
+  // beta6 is beta_vdiff_B1, the weight for difference between the two bet in Eq 27
+  // beta7 is beta_With_stay, the weight for the With Stay info in Eq 30
+  // beta8 is beta_against_stay, the weight for the Against Stay info in Eq 30
+  // beta9 is beta_With_switch, the weight for the With Switch info in Eq 30
+  // beta10 is beta_against_switch, the weight for the Against Switch info in Eq 30
+  // beta11 is our omega, the weight for the trade-off between the accurate and consistent social information
 }
 
 parameters {
@@ -88,9 +109,26 @@ model {
     thres[1] = 0.0;
     thres[2] = thres_diff[s];
 
+
+
     for (t in 1:Tsubj[s]) {
+      // compute the weights for the With and Against actions
+      real wgtWith_ms = 0.0;
+      real wgtAgst_ms = 0.0;
+      vector[coplayer] w;
+      w = rep_vector(0.0, coplayer);
+      // therefore, weights are temporarily stored
+
+        for (k in 1:coplayer) {
+            w[k] = beta[11,s] * acc[s,t,k] + (1 - beta[11,s]) * con[s,t,k]; // beta[11,s] is omega, the weight for the trade-off
+            // wgtWith_ms is the weight for the With action, wgtAgst_ms is the weight for the Against action
+            wgtWith_ms += w[k] * otherWith1[s,t,k];
+        }
+      wgtWith_ms = wgtWith_ms / sum(w); // normalize the weights
+      wgtAgst_ms = 1.0 - wgtWith_ms; // the rest of the weight is for the Against action
+
       // compute action probs using built-in softmax function and related to choice data
-      valfun1 = beta[1,s] * v[t];
+      valfun1 = beta[1,s] * v[t];                     //beta1 is betav, the weight for Eq 8
       choice1[s,t] ~ categorical_logit( valfun1 );
 
       valdiff = valfun1[choice1[s,t]] - valfun1[3-choice1[s,t]];
@@ -98,13 +136,13 @@ model {
       betfun1 = beta[5,s] + beta[6,s] * valdiff;
       bet1[s,t] ~ ordered_logistic(betfun1, thres);
 
-      valfun2 = beta[2,s] + beta[3,s] * valdiff + beta[4,s] * wgtAgst_ms[s,t];
+      valfun2 = beta[2,s] + beta[3,s] * valdiff + beta[4,s] * wgtAgst_ms;
       chswtch[s,t] ~ bernoulli_logit(valfun2);
 
       if ( chswtch[s,t] == 0) {
-        betfun2 = beta[7,s] * wgtWith_ms[s,t] + beta[8,s] * wgtAgst_ms[s,t] + betfun1;
+        betfun2 = beta[7,s] * wgtWith_ms + beta[8,s] * wgtAgst_ms + betfun1;
       } else if ( chswtch[s,t] == 1) {
-        betfun2 = beta[9,s] * wgtWith_ms[s,t] + beta[10,s] * wgtAgst_ms[s,t] + betfun1;        
+        betfun2 = beta[9,s] * wgtWith_ms + beta[10,s] * wgtAgst_ms + betfun1;        
       } 
 
       bet2[s,t] ~ ordered_logistic(betfun2, thres);     
@@ -163,13 +201,13 @@ generated quantities {
         betfun1 = beta[5,s] + beta[6,s] * valdiff;
         log_likb1[s] = log_likb1[s] + ordered_logistic_lpmf(bet1[s,t] | betfun1, thres);
         
-        valfun2 = beta[2,s] + beta[3,s] * valdiff + beta[4,s] * wgtAgst_ms[s,t];
+        valfun2 = beta[2,s] + beta[3,s] * valdiff + beta[4,s] * wgtAgst_ms;
         log_likc2[s] = log_likc2[s] + bernoulli_logit_lpmf(chswtch[s,t] | valfun2);
         
         if ( chswtch[s,t] == 0) {
-          betfun2 = beta[7,s] * wgtWith_ms[s,t] + beta[8,s] * wgtAgst_ms[s,t] + betfun1;
+          betfun2 = beta[7,s] * wgtWith_ms + beta[8,s] * wgtAgst_ms + betfun1;
         } else if ( chswtch[s,t] == 1) {
-          betfun2 = beta[9,s] * wgtWith_ms[s,t] + beta[10,s] * wgtAgst_ms[s,t] + betfun1;
+          betfun2 = beta[9,s] * wgtWith_ms + beta[10,s] * wgtAgst_ms + betfun1;
         }
         log_likb2[s] = log_likb2[s] + ordered_logistic_lpmf(bet2[s,t] | betfun2, thres);
                 
