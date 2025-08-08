@@ -423,8 +423,13 @@ linking function</p>
 \Phi (x)=\frac{1}{1+e^{-x}}
 \]</span></p>
 <p>Following the original study, we didn’t include the inverse Softmax
-temperature parameter <span class="math inline">\(\tau\)</span>. For the
-learning process, we have</p>
+temperature parameter <span class="math inline">\(\tau\)</span>. A <span class="math inline">\(\beta\)</span> weight (<span class="math inline">\(\beta_V\)</span>) was then multiplied with the
+values before being submitted to Softmax function with a categorical
+distribution, as in</p>
+<p><span class="math display">\[
+C1_t = \text{Categorical}(\text{Softmax}(\beta_V \cdot\mathbb{V}_{t}) )
+\]</span></p>
+<p>For the learning process, we have</p>
 <p><span class="math display">\[
 \begin{gathered}\delta_{\text{chosen,C2} ,t} =R_{t}-V_{\text{chosen,C2}
 ,t}\\ \delta_{\text{unchosen,C2} ,t} =-R_{t}-V_{\text{unchosen,C2} ,t}\\
@@ -432,7 +437,8 @@ V_{\text{chosen,C2} ,t+1}=V_{\text{chosen,C2}}+\alpha
 \delta_{\text{chosen,C2} ,t}\\ V_{\text{unchosen,C2}
 ,t+1}=V_{\text{unchosen,C2} ,t+1}+\alpha \delta_{\text{unchosen,C2}
 ,t}\end{gathered}.
-\]</span> The reward prediction error is denoted as <span class="math inline">\(\delta\)</span>, and <span class="math inline">\(R_{t}\)</span> is the reward on trial <span class="math inline">\(t\)</span>. The learning rate <span class="math inline">\(\alpha\)</span> is a free parameter.</p>
+\]</span></p>
+<p>The reward prediction error is denoted as <span class="math inline">\(\delta\)</span>, and <span class="math inline">\(R_{t}\)</span> is the reward on trial <span class="math inline">\(t\)</span>. The learning rate <span class="math inline">\(\alpha\)</span> is a free parameter.</p>
 <p>The instantaneous social influence on Choice 2 is also modeled as</p>
 <p><span class="math display">\[
 \begin{gathered}V_{t}(\text{switch} )=\beta_{\text{bias}_{\text{C2}}}
