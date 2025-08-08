@@ -64,14 +64,31 @@ f$data$otherWith1 <- 1 * ( #transform the logical to 0/1
 )
 # 1 if f$data$choice1 == f$data$otherChoice1, else 0
 
+# drop some subjects to reduce memory usage
+trim_first_dim <- function(x, n = 50) {
+  if (is.null(dim(x))) {
+    # Vector: just slice up to length 100
+    return(if (length(x) > n) x[1:n] else x)
+  } else {
+    # Array with arbitrary dimensions: construct index list
+    dims <- dim(x)
+    idx <- c(list(1:min(n, dims[1])), rep(list(quote(expr = )), length(dims) - 1))
+    return(do.call(`[`, c(list(x), idx, list(drop = FALSE))))
+  }
+}
+
+data <- map(f$data, trim_first_dim)
+data$nSubjects <- 50 # set the number of subjects to 100, as we trimmed the data
+
+rm(f) # free up memory
 # =============================================================================
 # model fit part revised from https://github.com/lei-zhang/BayesCog_Wien/blob/master/02.binomial_globe/_scripts/binomial_globe_main.R
 rstan_options(auto_write = TRUE)
 options(mc.cores = 4)
 
 modelFile <- 'sit_m7b.stan'
-nIter     <- 2000
-nChains   <- 4 
+nIter     <- 10000 # The largest R-hat is NA when it is 2000
+nChains   <- 4
 nWarmup   <- floor(nIter/2)
 nThin     <- 1
 
@@ -80,13 +97,14 @@ startTime = Sys.time(); print(startTime)
 cat("Calling", nChains, "simulations in Stan... \n")
 
 fit_globe <- rstan::stan(modelFile,
-                         data    = f$data,
+                         data    = data,
                          chains  = nChains,
                          iter    = nIter,
                          warmup  = nWarmup,
                          thin    = nThin,
                          init    = "random",
-                         seed    = 1450154626)
+                         seed    = 1450154626,
+                         control = list(adapt_delta = 0.95))
 
 cat("Finishing", modelFile, "model simulation ... \n")
 endTime = Sys.time(); print(endTime)  
