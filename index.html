@@ -11,7 +11,7 @@
 
 <meta name="author" content="Lingyu Meng" />
 
-<meta name="date" content="2025-08-08" />
+<meta name="date" content="2025-08-13" />
 
 <title>The Performance–Similarity Trade-off: A Reanalysis</title>
 
@@ -353,7 +353,7 @@ display: none;
 <h1 class="title toc-ignore">The Performance–Similarity Trade-off: A
 Reanalysis</h1>
 <h4 class="author">Lingyu Meng</h4>
-<h4 class="date">2025-08-08</h4>
+<h4 class="date">2025-08-13</h4>
 
 </div>
 
@@ -400,7 +400,7 @@ follows:</p>
 <p>Choice 1 was accounted for by the option values of option A and
 option B</p>
 <p><span class="math display">\[
-\mathbb{V}_{t} =[V_{t}(A),V_{t}(B)]
+\mathbb{V}_{t} =[V_{t}(A),V_{t}(B)],\tag{1}
 \]</span></p>
 <p>where <span class="math inline">\(\mathbb{V}_{t}\)</span> indicated a
 two-element vector consisting of option values of A and B on trial t.
@@ -409,18 +409,18 @@ function. On trial <span class="math inline">\(t\)</span>, the action
 probability of choosing option A (between A and B) was defined as
 follows</p>
 <p><span class="math display">\[
-P_{t}(A)=\frac{1}{1+e^{-(V_{t}(A)-V_{t}(B))}}.
+P_{t}(A)=\frac{1}{1+e^{-(V_{t}(A)-V_{t}(B))}}.\tag{2}
 \]</span></p>
 <p>For Choice 2, we modeled it as a “switch” (coded as 1) or a “stay”
 (coded as 0) using a logistic regression. On trial <span class="math inline">\(t\)</span>, the probability of switching given the
 switch value was defined as follows</p>
 <p><span class="math display">\[
-P_{t}(\text{switch} )=\Phi (V_{t}(\text{switch} ))
+P_{t}(\text{switch} )=\Phi (V_{t}(\text{switch} )),\tag{3}
 \]</span></p>
 <p>where <span class="math inline">\(\Phi\)</span> was the inverse logit
 linking function</p>
 <p><span class="math display">\[
-\Phi (x)=\frac{1}{1+e^{-x}}
+\Phi (x)=\frac{1}{1+e^{-x}}.\tag{4}
 \]</span></p>
 <p>Following the original study, we didn’t include the inverse Softmax
 temperature parameter <span class="math inline">\(\tau\)</span>. A <span class="math inline">\(\beta\)</span> weight (<span class="math inline">\(\beta_V\)</span>) was then multiplied with the
@@ -428,6 +428,7 @@ values before being submitted to Softmax function with a categorical
 distribution, as in</p>
 <p><span class="math display">\[
 C1_t = \text{Categorical}(\text{Softmax}(\beta_V \cdot\mathbb{V}_{t}) )
+.\tag{5}
 \]</span></p>
 <p>For the learning process, we have</p>
 <p><span class="math display">\[
@@ -436,7 +437,7 @@ C1_t = \text{Categorical}(\text{Softmax}(\beta_V \cdot\mathbb{V}_{t}) )
 V_{\text{chosen,C2} ,t+1}=V_{\text{chosen,C2}}+\alpha
 \delta_{\text{chosen,C2} ,t}\\ V_{\text{unchosen,C2}
 ,t+1}=V_{\text{unchosen,C2} ,t+1}+\alpha \delta_{\text{unchosen,C2}
-,t}\end{gathered}.
+,t}.\end{gathered}\tag{6}
 \]</span></p>
 <p>The reward prediction error is denoted as <span class="math inline">\(\delta\)</span>, and <span class="math inline">\(R_{t}\)</span> is the reward on trial <span class="math inline">\(t\)</span>. The learning rate <span class="math inline">\(\alpha\)</span> is a free parameter.</p>
 <p>The instantaneous social influence on Choice 2 is also modeled as</p>
@@ -444,7 +445,7 @@ V_{\text{chosen,C2} ,t+1}=V_{\text{chosen,C2}}+\alpha
 \begin{gathered}V_{t}(\text{switch} )=\beta_{\text{bias}_{\text{C2}}}
 +\beta_{\text{vdiff}_{\text{C2}}} (V_{\text{chosen,C1}
 ,t}-V_{\text{unchosen,C1} ,t})\\ +\beta_{\text{against}}
-w.\text{N}_{\text{against} ,t}\end{gathered}
+w.\text{N}_{\text{against} ,t}\end{gathered},\tag{7}
 \]</span></p>
 <p>where <span class="math inline">\(w.\text{N}_{\text{against}
 ,t}\)</span> denoted the preference-weighted amount of dissenting social
@@ -456,13 +457,12 @@ information on Choice 2, respectively. For the social influence, we
 have</p>
 <p><span class="math display">\[
 w.\text{N}_{\text{against,} t} =\frac{\sum_{s=1}^{K}
-w_{s,t}}{\sum_{s=1}^{4} w_{s,t}} ,K=0,1,...,4
+w_{s,t}}{\sum_{s=1}^{4} w_{s,t}} ,s=1,2,3,4,\tag{8}
 \]</span></p>
-<p>where <span class="math inline">\(s\in \{ 1,2,3,4\}\)</span>
-indicated the coplayer <span class="math inline">\(s\)</span>, <span class="math inline">\(K\)</span> indicated the number of opposite
-choices from the others and <span class="math inline">\(w_{s,t}\)</span>
-was participants’ trial-by-trial preference weight toward the other four
-coplayers.</p>
+<p>where <span class="math inline">\(s\)</span> indicated the coplayer,
+<span class="math inline">\(K\in \{ 0,1,2,3,4\}\)</span> indicated the
+number of opposite choices from the others and <span class="math inline">\(w_{s,t}\)</span> was participants’ trial-by-trial
+preference weight toward the other four coplayers.</p>
 <p><strong>In contrast to the original study, we calculate the
 consistency and accuracy of each group members considering previous 3
 trials.</strong> Therefore, we have</p>
@@ -471,26 +471,30 @@ trials.</strong> Therefore, we have</p>
 \text{win}_{s,\tau} ,t&gt;3\\ \text{con}_{s,t} =\frac{1}{3} \sum_{\tau
 =t-3}^{t-1} \text{sam}_{s,\tau} ,t&gt;3\\ \text{win}_{s,t}
 =\begin{cases}1&amp;\text{if} \  R_{s,t}&gt;0\\ 0&amp;\text{if}
-\  R_{s,t}&lt;0\end{cases}\\ \text{sam}_{s,t}
-=\begin{cases}1&amp;\text{if} \  \text{C2}_{s,t} =\text{C2}_{t}\\
-0&amp;\text{if} \  \text{C2}_{s,t} \neq
-\text{C2}_{t}\end{cases}\end{gathered}
+\  R_{s,t}=0\end{cases}\\ \text{sam}_{s,t} =\begin{cases}1&amp;\text{if}
+\  \text{C2}_{s,t} =\text{C2}_{t}\\ 0&amp;\text{if} \  \text{C2}_{s,t}
+\neq \text{C2}_{t}\end{cases},\end{gathered}\tag{9}
 \]</span></p>
 <p>where <span class="math inline">\(\text{C2}_{s,t}\)</span> indicated
-the choice of coplayer <span class="math inline">\(s\)</span> on trial
-<span class="math inline">\(t\)</span>, and <span class="math inline">\(\text{C2}_{t}\)</span> indicated the choice of
+the choice 2 of coplayer <span class="math inline">\(s\)</span> on trial
+<span class="math inline">\(t\)</span>, and <span class="math inline">\(\text{C2}_{t}\)</span> indicated the choice 2 of
 participant on trial <span class="math inline">\(t\)</span>. For the
 first three trials, we set</p>
 <p><span class="math display">\[
-\begin{gathered}\text{acc}_{s,1} =0\\ \text{con}_{s,1} =0\\
-\text{acc}_{s,t} =\frac{1}{t-1} \sum_{\tau =1}^{t-1} \text{win}_{s,\tau}
-,0&lt;t&lt;4\\ \text{con}_{s,t} =\frac{1}{t-1} \sum_{\tau =1}^{t-1}
-\text{sam}_{s,\tau} ,0&lt;t&lt;4\end{gathered}
+\begin{gathered}\text{acc}_{s,1} =0\\ \text{acc}_{s,t} =\frac{1}{t-1}
+\sum_{\tau =1}^{t-1} \text{win}_{s,\tau}
+,0&lt;t&lt;4\end{gathered}\tag{10}
+\]</span></p>
+<p>and</p>
+<p><span class="math display">\[
+\begin{gathered}\text{con}_{s,1} =0\\ \text{con}_{s,t} =\frac{1}{t-1}
+\sum_{\tau =1}^{t-1} \text{sam}_{s,\tau}
+,0&lt;t&lt;4.\end{gathered}\tag{11}
 \]</span></p>
 <p>Now, we define the preference weight <span class="math inline">\(w_{s,t}\)</span> as follows</p>
 <p><span class="math display">\[
 w_{s,t}=\omega \text{acc}_{s,t} +(1-\omega )\text{con}_{s,t} ,\omega \in
-[0,1]
+[0,1],\tag{12}
 \]</span></p>
 <p>where <span class="math inline">\(\omega\)</span> is the weight
 parameter that determines the relative importance of accuracy and
@@ -502,9 +506,9 @@ in the bet model are same as the weights defined above.</p>
 <h2>Important Assumptions</h2>
 <ol style="list-style-type: decimal">
 <li>In the original study, participants were able to choose first and
-second sources of information. The preference therefore asigned based on
-the order of selection. In our model, we assume that this selection is
-irrelevant to the preference.</li>
+second sources of information. The preference therefore assigned based
+on the order of selection. In our model, we assume that this selection
+is irrelevant to the preference.</li>
 <li>We suppose that all data are valid and there are no missing
 data.</li>
 <li>We set weights for the first trial as 0. That means we assume that
